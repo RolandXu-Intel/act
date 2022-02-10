@@ -9,6 +9,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -661,7 +662,20 @@ func (cr *containerReference) copyDir(dstPath string, srcPath string, useGitIgno
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		err = cr.cli.CopyToContainer(ctx, cr.id, dstPath, tarFile, types.CopyToContainerOptions{})
+
+		//err = cr.cli.CopyToContainer(ctx, cr.id, dstPath, tarFile, types.CopyToContainerOptions{})
+
+		dstD := fmt.Sprintf("%s:%s", cr.id, tarFile.Name())
+		logger.Printf("Extracting content from '%s' to %s '%s'", tarFile.Name(), cr.id, dstPath)
+
+		cmd := exec.Command("docker", "cp", tarFile.Name(), dstD)
+		stdout, err := cmd.Output()
+		logger.Debugf(string(stdout))
+		cmd = exec.Command("docker", "exec", cr.id, "tar", "--no-same-owner", "-xf", tarFile.Name(), "-C", dstPath)
+
+		stdout, err = cmd.Output()
+
+		logger.Debugf(string(stdout))
 		if err != nil {
 			return errors.WithStack(err)
 		}
